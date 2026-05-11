@@ -1,0 +1,14 @@
+# Runtime cache (user-specific, written by fetch-quota.ps1)
+quota-cache.json
+
+# Local settings / overrides
+*.local.json
+*.local.ps1
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
