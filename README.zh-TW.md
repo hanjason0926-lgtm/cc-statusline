@@ -7,20 +7,85 @@ English: [README.md](README.md)
 
 ## 預覽
 
-```
-🤖 Opus 4.7 | 📁 my-project | 🧠 12% (24.0k/200.0k) | 💰 $0.1234 | ⏰ 5h 6% ⟳ 11m | 7d 2% ⟳ 6d16h
-🌿 main | +0 ~2 ?1 ↑0 ↓0 *0 | 🐍 .venv | 📥 1.2k 📤 850 💾 4.5k 📖 12.0k
-```
+![Statusline 預覽](screenshot.png)
 
 ## 功能
 
-- **真實的 5h / 7d 配額** — 跟 TUI 裡 `/status` 看到的數字一樣，從 OAuth `usage` endpoint 抓
-- **背景刷新** — statusline 渲染從不卡住；快取超過 60 秒就背景觸發更新
-- **Context window 百分比** — 用最後一則訊息的 input + cache token 算
-- **Session 累計 token** — input / output / cache-create / cache-read
-- **Git 狀態** — branch、staged / modified / untracked、ahead / behind、stash 數
-- **venv 偵測** — 自動讀 `$VIRTUAL_ENV` 或 `$CONDA_DEFAULT_ENV`
-- **手動覆寫** — 提供 `update-quota.ps1`，自動抓壞掉時可以手動填數字
+### 1. 🤖 模型名稱
+
+從 Claude Code 餵進來的 stdin 取 `model.display_name`（例如 `Opus 4.7`、`Sonnet 4.6`、`Haiku 4.5`）。欄位不存在時 fallback 顯示 `Claude`。session 中切換模型時，可以一眼確認切換有生效。
+
+範例：`🤖 Opus 4.7`
+
+### 2. 📁 專案名稱
+
+從 stdin 讀 `workspace.project_dir`，只取**最後一層資料夾名**（不顯示完整路徑，避免佔太多版面）。欄位不存在的話 fallback 用目前工作目錄。多開好幾個 Claude Code 視窗在不同專案間切時很有用。
+
+範例：`📁 my-project`
+
+### 3. 🧠 Context window 用量
+
+讀取目前 session 的 transcript（從 Claude Code 餵進來的 `transcript_path`），抓**最後一則**訊息的 `usage` 區塊，計算：
+
+```
+context_used = input_tokens + cache_creation_input_tokens + cache_read_input_tokens
+context_pct  = context_used / 200000 * 100
+```
+
+預設上限 200,000 tokens（Sonnet / Opus 標準）。如果你用的是 1M context Opus，把 `statusline.ps1` 裡的 `200000` 改成 `1000000`。
+
+範例：`🧠 12% (24.0k/200.0k)`
+
+### 4. 💰 Session 成本
+
+直接讀 Claude Code 餵進來的 `cost.total_cost_usd`，四捨五入到小數點後 4 位。session 早期就能看到累積成本，不會早早變成科學記號。
+
+範例：`💰 $0.1234`
+
+### 5. ⏰ 真實的 5 小時 / 7 天訂閱配額
+
+顯示**跟 Claude Code TUI 裡 `/status` 完全一樣**的數字 — 目前用量百分比，加上距離下次 reset 的倒數（`⟳`）。不是估算、不是用 token 數量推算；數字直接從 Anthropic 的 OAuth `usage` endpoint 拿，所以永遠跟 `/status` 一致。
+
+範例：`⏰ 5h 6% ⟳ 11m | 7d 2% ⟳ 6d16h`
+
+### 6. 🌿 Git 狀態
+
+如果專案目錄是 git repo，會跑幾個輕量命令（`rev-parse`、`status --porcelain`、`rev-list ...@{upstream}`、`stash list`）然後顯示：
+
+- branch 名稱
+- `+N` 已 stage 的檔案數
+- `~N` 已修改的檔案數
+- `?N` untracked 的檔案數
+- `↑N` 領先 upstream 幾個 commit
+- `↓N` 落後 upstream 幾個 commit
+- `*N` stash 數
+
+範例：`🌿 main | +0 ~2 ?1 ↑0 ↓0 *0`
+
+不是 git repo 的話會顯示 `🌿 (no repo)`，不會有錯誤訊息亂噴。
+
+### 7. 🐍 Python venv 偵測
+
+優先讀 `$env:VIRTUAL_ENV`，沒有就 fallback 到 `$env:CONDA_DEFAULT_ENV`。會顯示 env 名字（只取資料夾名），都沒有的話顯示 `🐍 none`。可以一眼確認 Claude Code 有沒有繼承到你預期的 venv。
+
+### 8. 📥 📤 💾 📖 Session 累計 token 統計
+
+讀 transcript 算 context % 的同時，腳本也會**把整個 transcript 裡每一筆** `usage` 加總起來，給你看這個 session 各類別總共燒了多少 token：
+
+- 📥 input tokens
+- 📤 output tokens
+- 💾 cache-creation tokens
+- 📖 cache-read tokens
+
+對於診斷「為什麼這 session 一直在重新上傳大檔而不是讀快取」很有用。
+
+### 9. 不阻塞的背景刷新
+
+statusline 必須在毫秒內渲染完 — Claude Code 每次事件都會重跑這個腳本。所以 `statusline.ps1` 自己**完全不打網路**。它只讀本地的 `quota-cache.json`，發現快取超過 60 秒才會用背景隱藏程序去跑 `fetch-quota.ps1`。當下這次渲染用的是舊快取，下一次渲染才會看到新值。結果就是：API 慢或掛掉，statusline 也不會跟著卡。
+
+### 10. 手動配額覆寫
+
+如果 OAuth 抓壞掉（token 過期、endpoint 改了、你不是訂閱用戶），可以用 `update-quota.ps1` 手動把數字填進去，statusline 會跟自動抓的一樣顯示出來。詳見下方 [手動覆寫配額](#手動覆寫配額)。
 
 ## 需求
 
@@ -107,10 +172,6 @@ update-quota -Clear              # 砍掉快取檔
 - OAuth `usage` endpoint **沒有官方文件**。Anthropic 可以隨時改或拿掉——如果掛了，`fetch-quota.ps1` 會 silent 失敗，statusline 會 fallback 到上一份快取（或顯示 `--`）。
 - 腳本從 `.credentials.json` 讀 OAuth access token。如果你的安裝把 credential 放在別處（某些設定會用 Windows Credential Manager），需要自己改 `fetch-quota.ps1`。
 - 5h / 7d 配額只對 Pro / Max 訂閱用戶有意義。純 API key 用戶會看到 `--`。
-
-## 致謝
-
-OAuth `usage` endpoint 的方法是從 [tzengyuxio/claude-statusline](https://github.com/tzengyuxio/claude-statusline)（macOS / Linux 的 bash 版本）發現的。這個 repo 是 Windows PowerShell 重寫版，並做了一些格式 / 刷新邏輯的調整。
 
 ## License
 
