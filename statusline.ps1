@@ -80,8 +80,8 @@ if (Test-Path $quotaCache) {
 # --- Compose Line 1 (emoji as literals) ---
 $ctxStr  = "{0}% ({1}/{2})" -f $ctxPct, (FmtTok $ctxUsed), (FmtTok $ctxLimit)
 $costStr = '${0}' -f [math]::Round($cost,4)
-$line1 = "🤖 {0} | 📁 {1} | 🧠 {2} | 💰 {3} | ⏰ 5h {4} ⟳ {5} | 7d {6} ⟳ {7}" -f `
-    $model, $projectName, $ctxStr, $costStr, $h5Pct, $h5Reset, $d7Pct, $d7Reset
+$line1 = "🤖 {0} | 🧠 {1} | 💰 {2} | ⏰ 5h {3} ⟳ {4} | 7d {5} ⟳ {6}" -f `
+    $model, $ctxStr, $costStr, $h5Pct, $h5Reset, $d7Pct, $d7Reset
 
 # --- Line 2: git + venv ---
 $branch = $null
@@ -110,11 +110,11 @@ if ($projectDir -and (Test-Path $projectDir)) {
 }
 
 if ($branch) {
-    $line2 = "🌿 {0} | +{1} ~{2} ?{3} ↑{4} ↓{5} *{6}" -f $branch, $staged, $modified, $untracked, $ahead, $behind, $stashCount
+    $line2 = "📁 {0} | 🌿 {1} | +{2} ~{3} ?{4} ↑{5} ↓{6} *{7}" -f $projectName, $branch, $staged, $modified, $untracked, $ahead, $behind, $stashCount
 } elseif ($projectDir) {
-    $line2 = "🌿 (no repo)"
+    $line2 = "📁 {0} | 🌿 (no repo)" -f $projectName
 } else {
-    $line2 = "🌿 (no project dir)"
+    $line2 = "📁 (no project dir) | 🌿 (no project dir)"
 }
 
 if ($env:VIRTUAL_ENV) {

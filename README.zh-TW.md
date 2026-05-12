@@ -19,7 +19,7 @@ English: [README.md](README.md)
 
 ### 2. 📁 專案名稱
 
-從 stdin 讀 `workspace.project_dir`，只取**最後一層資料夾名**（不顯示完整路徑，避免佔太多版面）。欄位不存在的話 fallback 用目前工作目錄。多開好幾個 Claude Code 視窗在不同專案間切時很有用。
+從 stdin 讀 `workspace.project_dir`，只取**最後一層資料夾名**（不顯示完整路徑，避免佔太多版面）。欄位不存在的話 fallback 用目前工作目錄。多開好幾個 Claude Code 視窗在不同專案間切時很有用。會放在**第二行最前面**，這樣即使視窗縮窄、第一行被截掉，也還是看得到目前在哪個專案。
 
 範例：`📁 my-project`
 

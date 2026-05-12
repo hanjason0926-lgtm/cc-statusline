@@ -19,7 +19,7 @@ Example output: `🤖 Opus 4.7`
 
 ### 2. 📁 Project name
 
-Reads `workspace.project_dir` from stdin and shows just the leaf folder name (not the full path, to keep the line short). If the field is missing, falls back to the current working directory. Helps when you're juggling multiple Claude Code windows on different projects.
+Reads `workspace.project_dir` from stdin and shows just the leaf folder name (not the full path, to keep the line short). If the field is missing, falls back to the current working directory. Helps when you're juggling multiple Claude Code windows on different projects. Rendered at the **start of line 2** so it stays visible even when the terminal is narrow and line 1 gets truncated.
 
 Example output: `📁 my-project`
 
