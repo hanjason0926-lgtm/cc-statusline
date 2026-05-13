@@ -39,7 +39,7 @@ $cumulTotal = 0
 $sumIn = 0; $sumOut = 0; $sumCC = 0; $sumCR = 0
 if ($transcript -and (Test-Path $transcript)) {
     $lastUsage = $null
-    Get-Content $transcript -ErrorAction SilentlyContinue | ForEach-Object {
+    Get-Content $transcript -Encoding UTF8 -ErrorAction SilentlyContinue | ForEach-Object {
         try {
             $obj = $_ | ConvertFrom-Json -ErrorAction Stop
             $u = $obj.message.usage
