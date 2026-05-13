@@ -27,7 +27,7 @@ foreach ($f in $files) {
 # --- Update settings.json (merge, don't overwrite) ---
 $settingsPath = Join-Path $ConfigDir 'settings.json'
 $settings = if (Test-Path $settingsPath) {
-    try { Get-Content $settingsPath -Raw | ConvertFrom-Json } catch { [PSCustomObject]@{} }
+    try { Get-Content $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { [PSCustomObject]@{} }
 } else {
     [PSCustomObject]@{}
 }
