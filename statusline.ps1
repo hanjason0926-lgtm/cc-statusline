@@ -1,10 +1,26 @@
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding  = [System.Text.Encoding]::UTF8
 
-$raw = [Console]::In.ReadToEnd()
+$stdin = New-Object System.IO.StreamReader([Console]::OpenStandardInput(), [System.Text.Encoding]::UTF8)
+$raw = $stdin.ReadToEnd()
 try { $data = $raw | ConvertFrom-Json } catch { $data = $null }
 
-$model       = if ($data.model.display_name) { $data.model.display_name } else { 'Claude' }
+function PrettyModel($id) {
+    if (-not $id) { return 'Claude' }
+    if ($id -match '(?i)(opus|sonnet|haiku)-(\d+)-(\d+)') {
+        $tier = (Get-Culture).TextInfo.ToTitleCase($Matches[1].ToLower())
+        return "$tier $($Matches[2]).$($Matches[3])"
+    }
+    return $id
+}
+$model = if ($data.model.display_name) {
+    $data.model.display_name
+} elseif ($data.model.id) {
+    PrettyModel $data.model.id
+} else {
+    'Claude'
+}
 $projectDir  = if ($data.workspace.project_dir) { $data.workspace.project_dir } else { (Get-Location).Path }
 $projectName = Split-Path $projectDir -Leaf
 $cost        = if ($data.cost.total_cost_usd) { [double]$data.cost.total_cost_usd } else { 0 }
