@@ -32,7 +32,7 @@ context_used = input_tokens + cache_creation_input_tokens + cache_read_input_tok
 context_pct  = context_used / 200000 * 100
 ```
 
-預設上限 200,000 tokens（Sonnet / Opus 標準）。如果你用的是 1M context Opus，把 `statusline.ps1` 裡的 `200000` 改成 `1000000`。
+上限會依 model id 自動判斷：id 含 `[1m]` / `-1m` / `1m-`（1M context Opus）時用 `1000000`，否則 `200000`。要強制覆寫的話設環境變數 `$env:CC_CTX_LIMIT = '500000'`。
 
 範例：`🧠 12% (24.0k/200.0k)`
 
@@ -150,7 +150,7 @@ anthropic-beta: oauth-2025-04-20
 | 想改什麼 | 改哪個檔案 | 改哪一行 |
 | --- | --- | --- |
 | 快取 TTL（預設 60 秒） | `statusline.ps1` | `if ($cacheAge -gt 60)` |
-| Context window 大小（預設 200000） | `statusline.ps1` | `$ctxLimit = 200000`（1M Opus 改 `1000000`） |
+| Context window 大小 | 環境變數 | `$env:CC_CTX_LIMIT = '500000'`（不設就自動判斷：`[1m]` model id → 1M，其他 → 200k） |
 | Reset 倒數符號 | `statusline.ps1` | `$line1` format string 裡的兩個 `⟳` |
 | 整體版型 | `statusline.ps1` | `$line1` / `$line2` format strings |
 

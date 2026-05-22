@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'SilentlyContinue'
+﻿$ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
 
@@ -57,8 +57,15 @@ if ($transcript -and (Test-Path $transcript)) {
     }
     $cumulTotal = $sumIn + $sumOut + $sumCC + $sumCR
 }
-$ctxLimit = 200000
-$ctxPct   = if ($ctxLimit -gt 0) { [math]::Round($ctxUsed * 100 / $ctxLimit, 0) } else { 0 }
+$modelId = if ($data.model.id) { [string]$data.model.id } else { '' }
+if ($env:CC_CTX_LIMIT -and [int]::TryParse($env:CC_CTX_LIMIT, [ref]$null)) {
+    $ctxLimit = [int]$env:CC_CTX_LIMIT
+} elseif ($modelId -match '\[1m\]|-1m\b|1m-') {
+    $ctxLimit = 1000000
+} else {
+    $ctxLimit = 200000
+}
+$ctxPct = if ($ctxLimit -gt 0) { [math]::Round($ctxUsed * 100 / $ctxLimit, 0) } else { 0 }
 
 # --- Quota cache (auto-refreshed by fetch-quota.ps1) ---
 $h5Pct = '--'; $h5Reset = '--'

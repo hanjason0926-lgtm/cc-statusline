@@ -32,7 +32,7 @@ context_used = input_tokens + cache_creation_input_tokens + cache_read_input_tok
 context_pct  = context_used / 200000 * 100
 ```
 
-The default ceiling is 200,000 tokens (standard Sonnet / Opus). Bump it to `1000000` in `statusline.ps1` if you're on the 1M-context Opus tier.
+The ceiling is auto-detected from the model id: `1000000` when the id matches `[1m]` / `-1m` / `1m-` (the 1M-context Opus tier), otherwise `200000`. You can override it explicitly via the `CC_CTX_LIMIT` environment variable (e.g. `$env:CC_CTX_LIMIT = '500000'`).
 
 Example output: `🧠 12% (24.0k/200.0k)`
 
@@ -150,7 +150,7 @@ Those values get written to `quota-cache.json` in your Claude config dir. The st
 | Want to change | File | What to edit |
 | --- | --- | --- |
 | Cache TTL (default 60s) | `statusline.ps1` | `if ($cacheAge -gt 60)` |
-| Context window size (default 200000) | `statusline.ps1` | `$ctxLimit = 200000` (set to `1000000` for 1M Opus) |
+| Context window size | env var | `$env:CC_CTX_LIMIT = '500000'` (otherwise auto-detected: 1M for `[1m]` model ids, 200k otherwise) |
 | Reset countdown symbol | `statusline.ps1` | The two `⟳` characters in the `$line1` format string |
 | Line layout | `statusline.ps1` | The `$line1` / `$line2` format strings |
 
