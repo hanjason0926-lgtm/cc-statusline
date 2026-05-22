@@ -102,7 +102,7 @@ if (Test-Path $quotaCache) {
 
 # --- Compose Line 1 (emoji as literals) ---
 $ctxStr  = "{0}% ({1}/{2})" -f $ctxPct, (FmtTok $ctxUsed), (FmtTok $ctxLimit)
-$costStr = '${0}' -f [math]::Round($cost,4)
+$costStr = '${0:N4}' -f $cost
 $line1 = "🤖 {0} | 🧠 {1} | 💰 {2} | ⏰ 5h {3} ⟳ {4} | 7d {5} ⟳ {6}" -f `
     $model, $ctxStr, $costStr, $h5Pct, $h5Reset, $d7Pct, $d7Reset
 
