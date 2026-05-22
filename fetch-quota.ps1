@@ -41,9 +41,9 @@ function ToEpoch($iso) {
 $now = [int][DateTimeOffset]::Now.ToUnixTimeSeconds()
 
 $obj = [ordered]@{
-    h5_pct       = [int][math]::Floor([double]$resp.five_hour.utilization)
+    h5_pct       = [int][math]::Round([double]$resp.five_hour.utilization, 0, [MidpointRounding]::AwayFromZero)
     h5_reset_at  = ToEpoch $resp.five_hour.resets_at
-    d7_pct       = [int][math]::Floor([double]$resp.seven_day.utilization)
+    d7_pct       = [int][math]::Round([double]$resp.seven_day.utilization, 0, [MidpointRounding]::AwayFromZero)
     d7_reset_at  = ToEpoch $resp.seven_day.resets_at
     fetched_at   = $now
 }
