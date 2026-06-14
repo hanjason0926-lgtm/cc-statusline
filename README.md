@@ -1,7 +1,7 @@
 # cc-statusline
 
 A two-line PowerShell statusline for [Claude Code](https://claude.com/claude-code) on Windows.
-Shows model, project, context usage, session cost, **5-hour & weekly subscription quota with reset countdown**, plus git / venv / token stats.
+Shows model, project, context usage, session cost, **5-hour subscription quota with reset countdown**, plus 7-day quota or monthly usage credits depending on your plan, and git / venv / token stats.
 
 中文版：[README.zh-TW.md](README.zh-TW.md)
 
@@ -42,11 +42,15 @@ Pulls `cost.total_cost_usd` straight from the JSON Claude Code passes in. Rounde
 
 Example output: `💰 $0.1234`
 
-### 5. ⏰ Real 5-hour & 7-day subscription quota
+### 5. ⏰ Subscription quota
 
-Shows the **exact same numbers** as the `/status` slash command inside the Claude Code TUI — current utilization percentage plus a countdown (`⟳`) to the next reset. No estimation, no token-counting heuristic; the numbers come directly from Anthropic's OAuth `usage` endpoint, so they always match what `/status` reports.
+Shows your current quota usage and reset countdown. What appears depends on your plan:
 
-Example output: `⏰ 5h 6% ⟳ 11m | 7d 2% ⟳ 6d16h`
+- **Pro / Max with 7-day rate limit** → `⏰ 5h 6% ⟳ 11m | 7d 2% ⟳ 6d16h`
+- **Pro with usage credits (no 7-day limit)** → `⏰ 5h 10% ⟳ 3h40m | 💳 10% ($2.07/$20)`
+- **Neither** → `⏰ 5h 6% ⟳ 11m`
+
+Numbers come directly from Anthropic's OAuth `usage` endpoint — the same source as the `/status` slash command inside the Claude Code TUI.
 
 ### 6. 🌿 Git status
 
@@ -99,7 +103,7 @@ If the OAuth fetch ever breaks (token expires, endpoint changes, you're on a non
 Clone, then run `install.ps1`:
 
 ```powershell
-git clone https://github.com/<your-username>/cc-statusline.git
+git clone https://github.com/hanjason0926-lgtm/cc-statusline.git
 cd cc-statusline
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
 ```
@@ -135,7 +139,7 @@ Authorization: Bearer <claudeAiOauth.accessToken from .credentials.json>
 anthropic-beta: oauth-2025-04-20
 ```
 
-Response (trimmed):
+Response varies by plan. Pro with 7-day rate limit:
 ```json
 {
   "five_hour":  { "utilization": 6.0, "resets_at": "2026-05-11T04:50:01Z" },
@@ -143,7 +147,18 @@ Response (trimmed):
 }
 ```
 
-Those values get written to `quota-cache.json` in your Claude config dir. The statusline reads the cache and, if it's older than 60 seconds, kicks off a hidden background `fetch-quota.ps1` so the next render is fresh — without slowing down the current render.
+Pro with usage credits instead of a 7-day limit:
+```json
+{
+  "five_hour":    { "utilization": 10.0, "resets_at": "2026-06-14T09:10:00Z" },
+  "seven_day":    null,
+  "extra_usage":  { "is_enabled": true, "used_credits": 207, "monthly_limit": 2000, "utilization": 10.35 }
+}
+```
+
+> Note: `used_credits` and `monthly_limit` are in **cents** (207 = $2.07, 2000 = $20).
+
+These values get written to `quota-cache.json` in your Claude config dir. The statusline reads the cache and, if it's older than 60 seconds, kicks off a hidden background `fetch-quota.ps1` so the next render is fresh — without slowing down the current render.
 
 ## Customization
 
@@ -151,7 +166,7 @@ Those values get written to `quota-cache.json` in your Claude config dir. The st
 | --- | --- | --- |
 | Cache TTL (default 60s) | `statusline.ps1` | `if ($cacheAge -gt 60)` |
 | Context window size | env var | `$env:CC_CTX_LIMIT = '500000'` (otherwise auto-detected: 1M for `[1m]` model ids, 200k otherwise) |
-| Reset countdown symbol | `statusline.ps1` | The two `⟳` characters in the `$line1` format string |
+| Reset countdown symbol | `statusline.ps1` | The `⟳` characters in the `$h5Str` / `$quotaStr` lines |
 | Line layout | `statusline.ps1` | The `$line1` / `$line2` format strings |
 
 ## Manual quota override
@@ -171,7 +186,8 @@ Duration formats: `1h20m`, `5d21h`, `30m`, `90s` (combine `d` / `h` / `m` / `s`)
 
 - The OAuth `usage` endpoint is **not officially documented**. Anthropic could change or remove it without notice — if that happens, `fetch-quota.ps1` silently fails and the statusline falls back to the last cached values (or `--`).
 - The script reads your OAuth access token from `.credentials.json`. If your install stores credentials elsewhere (Windows Credential Manager on some setups), you'll need to adapt `fetch-quota.ps1`.
-- 5h / 7d quota only applies to Pro / Max subscription users. API-key-only users will see `--`.
+- 5h quota only applies to Pro / Max subscription users. API-key-only users will see `--`.
+- `CLAUDE_CONFIG_DIR` is a JavaScript-level variable inside Claude Code and is not exported to child processes. The scripts fall back to `$env:USERPROFILE\.claude` automatically.
 
 ## License
 

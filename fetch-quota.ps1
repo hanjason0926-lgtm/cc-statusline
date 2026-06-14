@@ -39,13 +39,18 @@ function ToEpoch($iso) {
 }
 
 $now = [int][DateTimeOffset]::Now.ToUnixTimeSeconds()
+$ex  = $resp.extra_usage
 
 $obj = [ordered]@{
-    h5_pct       = [int][math]::Round([double]$resp.five_hour.utilization, 0, [MidpointRounding]::AwayFromZero)
-    h5_reset_at  = ToEpoch $resp.five_hour.resets_at
-    d7_pct       = [int][math]::Round([double]$resp.seven_day.utilization, 0, [MidpointRounding]::AwayFromZero)
-    d7_reset_at  = ToEpoch $resp.seven_day.resets_at
-    fetched_at   = $now
+    h5_pct      = if ($resp.five_hour) { [int][math]::Round([double]$resp.five_hour.utilization, 0, [MidpointRounding]::AwayFromZero) } else { $null }
+    h5_reset_at = if ($resp.five_hour) { ToEpoch $resp.five_hour.resets_at } else { $null }
+    d7_pct      = if ($resp.seven_day) { [int][math]::Round([double]$resp.seven_day.utilization, 0, [MidpointRounding]::AwayFromZero) } else { $null }
+    d7_reset_at = if ($resp.seven_day) { ToEpoch $resp.seven_day.resets_at } else { $null }
+    ex_enabled  = if ($ex) { [bool]$ex.is_enabled } else { $false }
+    ex_pct      = if ($ex) { [int][math]::Round([double]$ex.utilization, 0, [MidpointRounding]::AwayFromZero) } else { $null }
+    ex_used     = if ($ex) { [int]$ex.used_credits } else { $null }
+    ex_limit    = if ($ex) { [int]$ex.monthly_limit } else { $null }
+    fetched_at  = $now
 }
 
 $json = $obj | ConvertTo-Json -Compress

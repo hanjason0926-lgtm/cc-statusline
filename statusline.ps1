@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
 
@@ -70,11 +70,14 @@ $ctxPct = if ($ctxLimit -gt 0) { [math]::Round($ctxUsed * 100 / $ctxLimit, 0) } 
 # --- Quota cache (auto-refreshed by fetch-quota.ps1) ---
 $h5Pct = '--'; $h5Reset = '--'
 $d7Pct = '--'; $d7Reset = '--'
-$quotaCache = Join-Path $env:CLAUDE_CONFIG_DIR 'quota-cache.json'
+$exEnabled = $false; $exPct = '--'; $exUsed = '--'; $exLimit = '--'
+# CLAUDE_CONFIG_DIR is a JS-level variable and may not be set in child processes
+$quotaDir   = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $env:USERPROFILE '.claude' }
+$quotaCache = Join-Path $quotaDir 'quota-cache.json'
 $now = [int][DateTimeOffset]::Now.ToUnixTimeSeconds()
 $cacheAge = if (Test-Path $quotaCache) { $now - [int]((Get-Item $quotaCache).LastWriteTime.ToUniversalTime() - [datetime]'1970-01-01').TotalSeconds } else { [int]::MaxValue }
 if ($cacheAge -gt 60) {
-    $fetcher = Join-Path $env:CLAUDE_CONFIG_DIR 'fetch-quota.ps1'
+    $fetcher = Join-Path $quotaDir 'fetch-quota.ps1'
     if (Test-Path $fetcher) {
         Start-Process -WindowStyle Hidden -FilePath 'powershell.exe' `
             -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',$fetcher,'-Quiet' | Out-Null
@@ -97,14 +100,29 @@ if (Test-Path $quotaCache) {
         if ($null -ne $q.h5_reset_at) { $h5Reset = FmtDur ([int]$q.h5_reset_at - $now) }
         if ($null -ne $q.d7_pct)      { $d7Pct = "$($q.d7_pct)%" }
         if ($null -ne $q.d7_reset_at) { $d7Reset = FmtDur ([int]$q.d7_reset_at - $now) }
+        if ($q.ex_enabled)             { $exEnabled = $true }
+        if ($null -ne $q.ex_pct)       { $exPct = "$($q.ex_pct)%" }
+        if ($null -ne $q.ex_used)      { $exUsed = '{0:N2}' -f ([double]$q.ex_used / 100) }
+        if ($null -ne $q.ex_limit)     { $exLimit = '{0:N0}' -f ([double]$q.ex_limit / 100) }
     } catch {}
 }
 
 # --- Compose Line 1 (emoji as literals) ---
 $ctxStr  = "{0}% ({1}/{2})" -f $ctxPct, (FmtTok $ctxUsed), (FmtTok $ctxLimit)
 $costStr = '${0:N4}' -f $cost
-$line1 = "🤖 {0} | 🧠 {1} | 💰 {2} | ⏰ 5h {3} ⟳ {4} | 7d {5} ⟳ {6}" -f `
-    $model, $ctxStr, $costStr, $h5Pct, $h5Reset, $d7Pct, $d7Reset
+$h5Str = if ($h5Pct -eq '--') { '5h --' } elseif ($h5Reset -eq '--') { "5h $h5Pct" } else { "5h $h5Pct ⟳ $h5Reset" }
+# Priority: 7d (if plan has it) → extra_usage credits → nothing
+$quotaStr = $null
+if ($d7Pct -ne '--') {
+    $quotaStr = if ($d7Reset -eq '--') { "7d $d7Pct" } else { "7d $d7Pct ⟳ $d7Reset" }
+} elseif ($exEnabled) {
+    $quotaStr = "💳 $exPct (`$$exUsed/`$$exLimit)"
+}
+$line1 = if ($quotaStr) {
+    "🤖 {0} | 🧠 {1} | 💰 {2} | ⏰ {3} | {4}" -f $model, $ctxStr, $costStr, $h5Str, $quotaStr
+} else {
+    "🤖 {0} | 🧠 {1} | 💰 {2} | ⏰ {3}" -f $model, $ctxStr, $costStr, $h5Str
+}
 
 # --- Line 2: git + venv ---
 $branch = $null
